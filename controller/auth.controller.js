@@ -1,7 +1,6 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../modal/user.modal.js';
-import { log } from 'console';
 
 export const signup = async (req, res) => {
   const { name, email, password, confirmPassword } = req.body;
@@ -90,7 +89,7 @@ export const logout = async (req, res) => {
 };
 
 export const update = async (req, res) => {
-  const { name, email, oldPassword, newPassword } = req.body;
+  const { name, newEmail, oldPassword, newPassword } = req.body; // Replace 'email' with 'newEmail'
 
   const userId = req.userId;
 
@@ -102,9 +101,10 @@ export const update = async (req, res) => {
       throw new Error('User not found');
     }
 
-    // Check if email is being updated and ensure it's not already in use
-    if (email && email !== user.email) {
-      const emailExists = await User.findOne({ email });
+    // Check if newEmail is being updated and ensure it's not already in use
+    if (newEmail && newEmail !== user.email) {
+      // Use 'newEmail' instead of 'email'
+      const emailExists = await User.findOne({ email: newEmail }); // Check for existing email
       if (emailExists) {
         return res.status(400).json({
           success: false,
@@ -131,12 +131,13 @@ export const update = async (req, res) => {
       user.password = hashedNewPassword; // Update password
     }
 
-    // Update name and/or email if provided
+    // Update name and/or newEmail if provided
     if (name) {
       user.name = name;
     }
-    if (email) {
-      user.email = email;
+    if (newEmail) {
+      // Use 'newEmail' instead of 'email'
+      user.email = newEmail;
     }
 
     // Save the updated user information
@@ -152,5 +153,29 @@ export const update = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password'); // Exclude password from the user data
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User data fetched successfully',
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error: ' + error.message,
+    });
   }
 };
