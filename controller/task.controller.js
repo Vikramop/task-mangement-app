@@ -10,11 +10,11 @@ const priority = (dueDate) => {
   const daysDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
 
   if (daysDifference < 0) {
-    return 'high'; // Overdue
-  } else if (daysDifference === 0 || daysDifference === 1) {
-    return 'moderate'; // Due today or tomorrow
+    return 'high';
+  } else if (daysDifference === 0) {
+    return 'moderate'; // Due today
   } else {
-    return 'low'; // More than two days remaining
+    return 'low'; // More than two days
   }
 };
 
@@ -32,6 +32,17 @@ export const createTask = async (req, res) => {
 
     if (!title || !checklist || !priority) {
       throw new Error('Please fill in all required fields');
+    }
+
+    if (checklist.length > 0) {
+      checklist.forEach((item) => {
+        if (!item.text) {
+          throw new Error('Please fill in all required fields');
+        }
+      });
+    }
+    if (!dueDate) {
+      throw new Error('Please Select a Due Date');
     }
 
     const userId = req.userId;

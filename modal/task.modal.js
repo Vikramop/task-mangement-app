@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import { User } from './user.modal.js';
+// import { User } from './user.modal.js';
 
 const checklistItemSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  text: { type: String, required: true },
   completed: { type: Boolean, default: false },
 });
 
@@ -15,7 +15,7 @@ const taskSchema = new mongoose.Schema({
   },
   priority: {
     type: String,
-    enum: ['High', 'Moderate', 'Low'],
+    enum: ['high', 'moderate', 'low'],
     required: true,
   },
   checklist: [checklistItemSchema],
