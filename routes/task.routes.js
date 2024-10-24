@@ -14,7 +14,7 @@ const router = express.Router();
 //Routes for Tasks
 router.post('/', verifyToken, createTask);
 
-router.get('/', getTasks);
+router.get('/', verifyToken, getTasks);
 
 router.put('/:taskId', editTask);
 

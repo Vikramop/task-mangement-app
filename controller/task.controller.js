@@ -1,5 +1,5 @@
-import { Task } from '../modal/task.modal.js';
-import { User } from '../modal/user.modal.js';
+import { Task } from '../model/task.model.js';
+import { User } from '../model/user.model.js';
 import jwt from 'jsonwebtoken';
 
 const priority = (dueDate) => {
@@ -21,6 +21,8 @@ const priority = (dueDate) => {
 export const createTask = async (req, res) => {
   const { title, checklist, dueDate, assignedTo, priority, category } =
     req.body;
+
+  console.log(title, checklist, dueDate, assignedTo, priority, category);
 
   try {
     const user = await User.findById(req.userId); // Find user by their ID
@@ -45,11 +47,19 @@ export const createTask = async (req, res) => {
       throw new Error('Please Select a Due Date');
     }
 
-    const userId = req.userId;
-    console.log('user', userId);
+    // Calculate priority based on due date if the user hasn't set a priority
+    const currentDate = new Date();
+    const taskDueDate = new Date(dueDate);
 
-    // If the user selects a priority at creation, use it, otherwise adjust based on date
-    const calculatedPriority = priority || priority(dueDate);
+    let calculatedPriority = priority || 'low';
+
+    // If the user provides moderate or low  priority but the due date is today or in the past, set priority to 'high'
+    if (priority === ('moderate' || 'low') && taskDueDate <= currentDate) {
+      calculatedPriority = 'high';
+    }
+
+    const userId = req.userId;
+    // console.log('user', userId);
 
     const task = new Task({
       title,
@@ -75,18 +85,22 @@ export const createTask = async (req, res) => {
 
 export const getTasks = async (req, res) => {
   try {
+    // console.log('User ID:', req.userId);
     const tasks = await Task.find({ createdBy: req.userId });
 
-    // Adjust priority of each task based on the due date
-    tasks.forEach((task) => {
-      task.priority = priority(task.dueDate);
-    });
+    // console.log('Fetched Tasks1:', tasks);
+
+    // tasks.forEach((task) => {
+    //   task.priority = priority(task.dueDate);
+    // });
+    // console.log('Fetched Tasks2:', tasks);
 
     res.status(200).json({
       success: true,
       tasks,
     });
   } catch (error) {
+    console.error('Error fetching tasks:', error.message);
     res.status(400).json({ success: false, message: error.message });
   }
 };
@@ -125,21 +139,22 @@ export const editTask = async (req, res) => {
 };
 
 export const deleteTask = async (req, res) => {
-  const { taskId } = req.params; // Assuming the task ID is passed in the URL
+  const { taskId } = req.params;
 
   try {
-    const task = await Task.findById(taskId); // Find the task by ID
+    const task = await Task.findById(taskId);
     if (!task) {
       return res
         .status(404)
         .json({ success: false, message: 'Task not found' });
     }
 
-    await Task.findByIdAndDelete(taskId); // Delete the task
+    await Task.findByIdAndDelete(taskId);
 
     res.status(200).json({
       success: true,
       message: 'Task deleted successfully',
+      task,
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -158,7 +173,8 @@ export const shareTask = async (req, res) => {
         .json({ success: false, message: 'Task not found' });
     }
 
-    const shareableLink = `${process.env.BASE_URL}/api/task/${taskId}`; // BASE_URL should be your API base URL
+    // Update this line to point to the frontend route
+    const shareableLink = `${process.env.FRONT_URL}/task/${taskId}`; // Pointing to the frontend route
 
     res.status(200).json({
       success: true,
@@ -185,11 +201,9 @@ export const getTaskById = async (req, res) => {
         .json({ success: false, message: 'Task not found' });
     }
 
-    res.status(200).json({
-      success: true,
-      task,
-    });
+    res.status(200).json({ success: true, task });
   } catch (error) {
+    console.error(error);
     res.status(400).json({ success: false, message: error.message });
   }
 };
