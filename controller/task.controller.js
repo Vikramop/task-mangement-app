@@ -25,7 +25,7 @@ export const createTask = async (req, res) => {
   console.log(title, checklist, dueDate, assignedTo, priority, category);
 
   try {
-    const user = await User.findById(req.userId); // Find user by their ID
+    const user = await User.findById(req.userId);
     if (!user) {
       return res
         .status(404)
@@ -45,6 +45,14 @@ export const createTask = async (req, res) => {
     }
     if (!dueDate) {
       throw new Error('Please Select a Due Date');
+    }
+
+    const assignee = await User.findOne({ email: assignedTo });
+    if (!assignee) {
+      return res.status(400).json({
+        success: false,
+        message: `The email ${assignedTo} has no account! please create one.`,
+      });
     }
 
     // Calculate priority based on due date if the user hasn't set a priority
@@ -108,25 +116,35 @@ export const getTasks = async (req, res) => {
 export const editTask = async (req, res) => {
   const { title, checklist, dueDate, assignedTo, priority, category } =
     req.body;
-  const { taskId } = req.params; // Assuming the task ID is passed in the URL
+  const { taskId } = req.params;
 
   try {
-    const task = await Task.findById(taskId); // Find the task by ID
+    const task = await Task.findById(taskId);
     if (!task) {
       return res
         .status(404)
         .json({ success: false, message: 'Task not found' });
     }
 
-    // Update task fields if provided
+    if (assignedTo) {
+      const assignee = await User.findOne({ email: assignedTo });
+      if (!assignee) {
+        return res.status(400).json({
+          success: false,
+          message: `The email ${assignedTo} has no account! please create one.`,
+        });
+      }
+      task.assignedTo = assignedTo;
+    }
+
     if (title) task.title = title;
     if (category) task.category = category;
-    if (checklist) task.checklist = checklist; // Assuming checklist is an array
+    if (checklist) task.checklist = checklist;
     if (dueDate) task.dueDate = dueDate;
     if (assignedTo) task.assignedTo = assignedTo;
     if (priority) task.priority = priority;
 
-    await task.save(); // Save the updated task
+    await task.save();
 
     res.status(200).json({
       success: true,
