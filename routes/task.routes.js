@@ -8,6 +8,7 @@ import {
   getTaskById,
   editTask,
   getTaskAnalytics,
+  addAssignee,
 } from '../controller/task.controller.js';
 
 const router = express.Router();
@@ -24,6 +25,8 @@ router.delete('/:taskId', deleteTask);
 router.post('/share/:taskId', shareTask);
 
 router.get('/analytics', verifyToken, getTaskAnalytics);
+
+router.get('/add', verifyToken, addAssignee);
 
 router.get('/:taskId', getTaskById);
 

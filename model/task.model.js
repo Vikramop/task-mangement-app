@@ -18,11 +18,7 @@ const taskSchema = new mongoose.Schema({
     required: true,
   },
   checklist: [checklistItemSchema],
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null,
-  },
+  assignedTo: { type: String },
   dueDate: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
