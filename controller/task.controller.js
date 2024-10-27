@@ -19,8 +19,14 @@ const priority = (dueDate) => {
 };
 
 export const createTask = async (req, res) => {
-  const { title, checklist, dueDate, assignedTo, priority, category } =
-    req.body;
+  const {
+    title,
+    checklist,
+    dueDate,
+    assignedTo = null,
+    priority,
+    category,
+  } = req.body;
 
   console.log(title, checklist, dueDate, assignedTo, priority, category);
 
@@ -47,12 +53,16 @@ export const createTask = async (req, res) => {
       throw new Error('Please Select a Due Date');
     }
 
-    const assignee = await User.findOne({ email: assignedTo });
-    if (!assignee) {
-      return res.status(400).json({
-        success: false,
-        message: `The email ${assignedTo} has no account! please create one.`,
-      });
+    // Only check for the assignee if it's provided
+    let assignee = null;
+    if (assignedTo) {
+      assignee = await User.findOne({ email: assignedTo });
+      if (!assignee) {
+        return res.status(400).json({
+          success: false,
+          message: `The assignee email ${assignedTo} has no account! Please create one.`,
+        });
+      }
     }
 
     // Calculate priority based on due date if the user hasn't set a priority
@@ -61,20 +71,19 @@ export const createTask = async (req, res) => {
 
     let calculatedPriority = priority || 'low';
 
-    // If the user provides moderate or low  priority but the due date is today or in the past, set priority to 'high'
+    // If the user provides moderate or low priority but the due date is today or in the past, set priority to 'high'
     if (priority === ('moderate' || 'low') && taskDueDate <= currentDate) {
       calculatedPriority = 'high';
     }
 
     const userId = req.userId;
-    // console.log('user', userId);
 
     const task = new Task({
       title,
       category,
       checklist,
       dueDate,
-      assignedTo,
+      assignedTo: assignee ? assignee._id : null, // Set to null if no assignee
       priority: calculatedPriority,
       createdBy: userId,
     });
@@ -237,5 +246,46 @@ export const getTaskById = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getTaskAnalytics = async (req, res) => {
+  try {
+    // console.log('User ID:', req.userId);
+    if (!req.userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not authenticated or userId not found.',
+      });
+    }
+
+    // Retrieve only the tasks for the logged-in user
+    const tasks = await Task.find({ createdBy: req.userId });
+
+    console.log('taskskss', tasks);
+
+    const analyticsData = {
+      backlogTasks: tasks.filter((task) => task.category === 'Backlog').length,
+      toDoTasks: tasks.filter((task) => task.category === 'To-Do').length,
+      inProgressTasks: tasks.filter((task) => task.category === 'In Progress')
+        .length,
+      completedTasks: tasks.filter((task) => task.category === 'Done').length,
+      lowPriority: tasks.filter((task) => task.priority === 'low').length,
+      moderatePriority: tasks.filter((task) => task.priority === 'moderate')
+        .length,
+      highPriority: tasks.filter((task) => task.priority === 'high').length,
+      dueDateTasks: tasks.filter(
+        (task) => task.dueDate && task.dueDate < new Date()
+      ).length,
+    };
+
+    res.status(200).json({
+      success: true,
+      analyticsData,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: 'Error fetching analytics', error });
   }
 };
