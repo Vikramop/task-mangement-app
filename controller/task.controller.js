@@ -318,7 +318,7 @@ export const addAssignee = async (req, res) => {
   const mainUserId = req.userId; // ID of the user making the request
 
   try {
-    // Check if the assignee already exists
+    // Check if the assignee exists
     const assignee = await User.findOne({ email });
 
     if (!assignee) {
@@ -328,33 +328,103 @@ export const addAssignee = async (req, res) => {
       });
     }
 
-    // Get tasks of the main user
+    // Get all tasks created by the main user
     const tasks = await Task.find({ createdBy: mainUserId });
 
-    // Copy relevant data to the assignee
-    // For instance, you might want to duplicate tasks or share information
-    tasks.forEach(async (task) => {
-      // Here, we assume you want to duplicate the tasks for the assignee
-      const newTask = new Task({
-        title: task.title,
-        checklist: task.checklist,
-        dueDate: task.dueDate,
-        priority: task.priority,
-        category: task.category,
-        assignedTo: email, // Assign the task to the new user
-        createdBy: mainUserId, // Keep the main user as the creator
-      });
+    if (tasks.length > 0) {
+      // Iterate through each task and update the assignedTo field
+      for (const task of tasks) {
+        task.assignedTo = email; // Assign the new user's email to the task
+        await task.save(); // Save the updated task
+      }
 
-      await newTask.save();
+      return res.status(200).json({
+        success: true,
+        message: `All tasks have been assigned to user with email ${email}.`,
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: 'No tasks found for the main user.',
+      });
+    }
+  } catch (error) {
+    console.error('Error adding assignee:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding assignee',
+      error: error.message || error,
     });
+  }
+};
+
+/////////////////////////////////
+
+export const sortTasks = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'User not found' });
+    }
+
+    const currentDate = new Date();
+
+    // Define the start of the current week (Sunday)
+    const weeklyStart = new Date(currentDate);
+    weeklyStart.setDate(currentDate.getDate() - currentDate.getDay()); // Go back to Sunday
+    weeklyStart.setHours(0, 0, 0, 0); // Reset time to start of the day
+
+    // Define the end of the current week (Saturday)
+    const weeklyEnd = new Date(weeklyStart);
+    weeklyEnd.setDate(weeklyStart.getDate() + 6); // Saturday of the same week
+    weeklyEnd.setHours(23, 59, 59, 999); // Set to end of the day
+
+    // Define the start of the current month (1st day)
+    const monthlyStart = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1
+    );
+    monthlyStart.setHours(0, 0, 0, 0); // Reset time to start of the day
+
+    // Define the end of the current month (last day of the month)
+    const monthlyEnd = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      0
+    ); // Last day of this month
+    monthlyEnd.setHours(23, 59, 59, 999); // Set to end of the day
+
+    const tasks = await Task.find({
+      $or: [{ createdBy: req.userId }, { assignedTo: user.email }],
+    });
+
+    const sortedTasks = {
+      daily: tasks.filter(
+        (task) =>
+          new Date(task.dueDate).toDateString() === currentDate.toDateString()
+      ),
+      weekly: tasks.filter(
+        (task) =>
+          new Date(task.dueDate) >= weeklyStart &&
+          new Date(task.dueDate) <= weeklyEnd
+      ),
+      monthly: tasks.filter(
+        (task) =>
+          new Date(task.dueDate) >= monthlyStart &&
+          new Date(task.dueDate) <= monthlyEnd
+      ),
+      beyond: tasks.filter((task) => new Date(task.dueDate) > monthlyEnd),
+    };
 
     res.status(200).json({
       success: true,
-      message: `User with email ${email} has been added as an assignee and tasks have been copied.`,
+      tasks: sortedTasks,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: 'Error adding assignee', error });
+    console.error('Error sorting tasks:', error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
 };

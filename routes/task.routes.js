@@ -9,11 +9,14 @@ import {
   editTask,
   getTaskAnalytics,
   addAssignee,
+  sortTasks,
 } from '../controller/task.controller.js';
 
 const router = express.Router();
 
 //Routes for Tasks
+router.get('/sort', verifyToken, sortTasks);
+
 router.post('/', verifyToken, createTask);
 
 router.get('/', verifyToken, getTasks);
@@ -26,7 +29,7 @@ router.post('/share/:taskId', shareTask);
 
 router.get('/analytics', verifyToken, getTaskAnalytics);
 
-router.get('/add', verifyToken, addAssignee);
+router.post('/add', verifyToken, addAssignee);
 
 router.get('/:taskId', getTaskById);
 
