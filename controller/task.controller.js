@@ -93,19 +93,22 @@ export const createTask = async (req, res) => {
 
 export const getTasks = async (req, res) => {
   try {
-    // console.log('User ID:', req.userId);
-    const tasks = await Task.find({ createdBy: req.userId });
+    // Find tasks created by or assigned to the current user
+    const tasks = await Task.find({
+      $or: [{ createdBy: req.userId }, { assignedTo: req.userId }],
+    })
+      .populate('assignedTo', 'email') // Populate only the email field of assigned user
+      .populate('createdBy', 'email');
 
-    // console.log('Fetched Tasks1:', tasks);
-
-    // tasks.forEach((task) => {
-    //   task.priority = priority(task.dueDate);
-    // });
-    // console.log('Fetched Tasks2:', tasks);
+    // Transform `assignedTo` to just email string in each task object
+    const transformedTasks = tasks.map((task) => ({
+      ...task.toObject(),
+      assignedTo: task.assignedTo ? task.assignedTo.email : null, // use only email here
+    }));
 
     res.status(200).json({
       success: true,
-      tasks,
+      tasks: transformedTasks,
     });
   } catch (error) {
     console.error('Error fetching tasks:', error.message);
@@ -126,23 +129,34 @@ export const editTask = async (req, res) => {
         .json({ success: false, message: 'Task not found' });
     }
 
+    // Check if the user is authorized to edit (creator or assignee)
+    if (
+      task.createdBy.toString() !== req.userId &&
+      task.assignedTo?.toString() !== req.userId
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: 'Not authorized to edit this task' });
+    }
+
+    // Update task details
+    if (title) task.title = title;
+    if (category) task.category = category;
+    if (checklist) task.checklist = checklist;
+    if (dueDate) task.dueDate = dueDate;
+    if (priority) task.priority = priority;
+
+    // Assign task if `assignedTo` email is provided
     if (assignedTo) {
       const assignee = await User.findOne({ email: assignedTo });
       if (!assignee) {
         return res.status(400).json({
           success: false,
-          message: `The email ${assignedTo} has no account! please create one.`,
+          message: `The email ${assignedTo} has no account! Please create one.`,
         });
       }
-      task.assignedTo = assignedTo;
+      task.assignedTo = assignee._id; // Assign the ObjectId of the assignee
     }
-
-    if (title) task.title = title;
-    if (category) task.category = category;
-    if (checklist) task.checklist = checklist;
-    if (dueDate) task.dueDate = dueDate;
-    if (assignedTo) task.assignedTo = assignedTo;
-    if (priority) task.priority = priority;
 
     await task.save();
 

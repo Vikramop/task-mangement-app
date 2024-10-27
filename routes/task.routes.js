@@ -16,7 +16,7 @@ router.post('/', verifyToken, createTask);
 
 router.get('/', verifyToken, getTasks);
 
-router.put('/:taskId', editTask);
+router.put('/:taskId', verifyToken, editTask);
 
 router.delete('/:taskId', deleteTask);
 
