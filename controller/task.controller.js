@@ -369,59 +369,66 @@ export const sortTasks = async (req, res) => {
         .json({ success: false, message: 'User not found' });
     }
 
+    const filter = req.query.filter; // Get the filter type from the query
     const currentDate = new Date();
 
-    // Define the start of the current week (Sunday)
+    // Define the start and end of the current week (Sunday to Saturday)
     const weeklyStart = new Date(currentDate);
-    weeklyStart.setDate(currentDate.getDate() - currentDate.getDay()); // Go back to Sunday
-    weeklyStart.setHours(0, 0, 0, 0); // Reset time to start of the day
+    weeklyStart.setDate(currentDate.getDate() - currentDate.getDay());
+    weeklyStart.setHours(0, 0, 0, 0);
 
-    // Define the end of the current week (Saturday)
     const weeklyEnd = new Date(weeklyStart);
-    weeklyEnd.setDate(weeklyStart.getDate() + 6); // Saturday of the same week
-    weeklyEnd.setHours(23, 59, 59, 999); // Set to end of the day
+    weeklyEnd.setDate(weeklyStart.getDate() + 6);
+    weeklyEnd.setHours(23, 59, 59, 999);
 
-    // Define the start of the current month (1st day)
+    // Define the start and end of the current month
     const monthlyStart = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
       1
     );
-    monthlyStart.setHours(0, 0, 0, 0); // Reset time to start of the day
+    monthlyStart.setHours(0, 0, 0, 0);
 
-    // Define the end of the current month (last day of the month)
     const monthlyEnd = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + 1,
       0
-    ); // Last day of this month
-    monthlyEnd.setHours(23, 59, 59, 999); // Set to end of the day
+    );
+    monthlyEnd.setHours(23, 59, 59, 999);
 
     const tasks = await Task.find({
       $or: [{ createdBy: req.userId }, { assignedTo: user.email }],
     });
 
-    const sortedTasks = {
-      daily: tasks.filter(
+    let filteredTasks;
+
+    if (filter === 'Today') {
+      filteredTasks = tasks.filter(
         (task) =>
           new Date(task.dueDate).toDateString() === currentDate.toDateString()
-      ),
-      weekly: tasks.filter(
+      );
+    } else if (filter === 'This Week') {
+      filteredTasks = tasks.filter(
         (task) =>
           new Date(task.dueDate) >= weeklyStart &&
           new Date(task.dueDate) <= weeklyEnd
-      ),
-      monthly: tasks.filter(
+      );
+    } else if (filter === 'This Month') {
+      filteredTasks = tasks.filter(
         (task) =>
           new Date(task.dueDate) >= monthlyStart &&
           new Date(task.dueDate) <= monthlyEnd
-      ),
-      beyond: tasks.filter((task) => new Date(task.dueDate) > monthlyEnd),
-    };
+      );
+    } else {
+      // Default to return all tasks beyond the current month if no filter is matched
+      filteredTasks = tasks.filter(
+        (task) => new Date(task.dueDate) > monthlyEnd
+      );
+    }
 
     res.status(200).json({
       success: true,
-      tasks: sortedTasks,
+      tasks: filteredTasks,
     });
   } catch (error) {
     console.error('Error sorting tasks:', error.message);
