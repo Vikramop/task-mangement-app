@@ -227,7 +227,9 @@ export const shareTask = async (req, res) => {
     }
 
     // Update this line to point to the frontend route
-    const shareableLink = `${process.env.FRONT_URL}/task/${taskId}`; // Pointing to the frontend route
+    const shareableLink = `${process.env.FRONT_URL}/task/${taskId}`;
+
+    console.log('bakcne link', shareableLink);
 
     res.status(200).json({
       success: true,
