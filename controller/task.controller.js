@@ -226,7 +226,7 @@ export const shareTask = async (req, res) => {
         .json({ success: false, message: 'Task not found' });
     }
 
-    const shareableLink = `${process.env.FRONT_URL}/task/${taskId}`;
+    const shareableLink = `${process.env.FRONT_URL}/#/task/${taskId}`;
 
     console.log('bakcne link', shareableLink);
 
