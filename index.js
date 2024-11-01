@@ -24,13 +24,11 @@ app.use(express.json()); // Parses req.body
 app.use('/api/task', taskRoutes);
 app.use('/api/auth', authRoutes);
 
-// Serve the frontend files (React build directory)
-const __dirname = path.resolve(); // Get the directory path
-app.use(express.static(path.join(__dirname, 'build')));
-
-// Catch-all route to serve `index.html` for unmatched routes
+// Redirect unmatched routes to the frontend
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.redirect(
+    `https://task-management-app-frontend-7yuo.onrender.com${req.originalUrl}`
+  );
 });
 
 // Start the server
