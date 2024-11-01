@@ -226,7 +226,6 @@ export const shareTask = async (req, res) => {
         .json({ success: false, message: 'Task not found' });
     }
 
-    // Update this line to point to the frontend route
     const shareableLink = `${process.env.FRONT_URL}/task/${taskId}`;
 
     console.log('bakcne link', shareableLink);
@@ -235,6 +234,7 @@ export const shareTask = async (req, res) => {
       success: true,
       message: 'Task shared successfully',
       link: shareableLink,
+      task,
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
